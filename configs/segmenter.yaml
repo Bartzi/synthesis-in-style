@@ -1,0 +1,24 @@
+
+# logger options
+image_save_iter: 500        # How often do you want to save output images during training
+image_display_iter: 500       # How often do you want to display output images during training
+display_size: 16              # How many images do you want to display each time
+snapshot_save_iter: 10000     # How often do you want to save trained models
+log_iter: 10                  # How often do you want to log the training stats
+#validation_iter: 2   # --> if you want to do evaluation in a fixed interval and not every epoch
+
+# optimization options
+#max_iter: 100000              # maximum number of training iterations
+epochs: 50
+batch_size: 16                 # batch size
+beta1: 0.5                    # Adam parameter
+beta2: 0.999                  # Adam parameter
+init: xavier                 # initialization [gaussian/kaiming/xavier/orthogonal]
+weight_decay: 0.0001          # weight decay
+lr: 0.005
+
+# data options
+input_dim: 3                                # number of image channels [1/3]
+num_workers: 6                             # number of data loading threads
+image_size: 256                             # first resize the shortest image side to this size
+downsample_size: 256
