@@ -157,7 +157,7 @@ if __name__ == "__main__":
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--mpi-backend', default='gloo', choices=['nccl', 'gloo'],
                         help="MPI backend to use for interprocess communication")
-    parser.add_argument("--class-to-color-map", default="handwriting_colors.json",
+    parser.add_argument("--class-to-color-map", default="semantic_labeller/configs/handwriting_colors.json",
                         help="path to json file with class color map")
     parser.add_argument("-c", "--cache-root",
                         help="path to a folder where you want to cache images on the local file system")

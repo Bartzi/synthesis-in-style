@@ -372,7 +372,7 @@ if __name__ == '__main__':
     parser.add_argument("-e", "--eval-name", default='segmentation',
                         help='name you want to give to this evaluation run (might be helpful when evaluating on an eval'
                              ' dataset')
-    parser.add_argument("--class-to-color-map", default="handwriting_colors.json",
+    parser.add_argument("--class-to-color-map", default="semantic_labeller/configs/handwriting_colors.json",
                         help="path to json file with class color map")
     parser.add_argument("--merge-mode", type=str, default="None", choices=["None", "MinAreaBBox", "ConvexHull"],
                         help="specifies how the contours of a line should be merged")
