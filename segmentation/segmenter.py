@@ -22,13 +22,14 @@ class Segmenter:
 
     def __init__(self, model_checkpoint: str, device: str, class_to_color_map: Union[str, Path],
                  max_image_size: int = None, print_progress: bool = True, patch_overlap: Union[int, None] = None,
-                 patch_overlap_factor: Union[float, None] = None):
+                 patch_overlap_factor: Union[float, None] = None, show_confidence_in_segmentation: bool = False):
         self.config = load_config(model_checkpoint, None)
         self.class_to_color_map = self.load_color_map(class_to_color_map)
         self.device = device
         self.patch_size = int(self.config['image_size'])
         self.print_progress = print_progress
         self.max_image_size = max_image_size
+        self.show_confidence_in_segmentation = show_confidence_in_segmentation
         self.network = self.load_network(model_checkpoint)
 
         self.patch_overlap = self.get_patch_overlap(patch_overlap, patch_overlap_factor)
@@ -124,7 +125,7 @@ class Segmenter:
                 prediction = self.network.predict(batch)
 
             predicted_patches.append({
-                "prediction": torch.squeeze(torch.detach(prediction), dim=0).cpu(),
+                "prediction": torch.squeeze(torch.detach(prediction), dim=0),
                 "bbox": patch["bbox"]
             })
 
@@ -135,7 +136,7 @@ class Segmenter:
         num_classes = self.network.num_classes
         max_width = output_size[0]
         max_height = output_size[1]
-        assembled_predictions = torch.full((max_height, max_width, num_classes), float("-inf"))
+        assembled_predictions = torch.full((max_height, max_width, num_classes), float("-inf"), device=self.device)
 
         for patch in self.progress_bar(patches, desc="Merging patches...", leave=False):
             reordered_patch = patch["prediction"].permute(1, 2, 0)
@@ -150,7 +151,7 @@ class Segmenter:
             max_values = torch.maximum(assembled_window, patch_without_padding)
             assembled_predictions[y_start:y_end, x_start:x_end, :] = max_values
 
-        return assembled_predictions.permute(2, 0, 1)
+        return assembled_predictions
 
     def convert_image_to_correct_color_space(self, image: ImageClass) -> ImageClass:
         if self.network.num_input_channels == 3:
@@ -165,19 +166,48 @@ class Segmenter:
     def segment_image(self, image: ImageClass) -> Tuple[ImageClass, torch.Tensor]:
         image = self.convert_image_to_correct_color_space(image)
 
-        image_size = image.size
         if self.max_image_size > 0 and any(side > self.max_image_size for side in image.size):
             image.thumbnail((self.max_image_size, self.max_image_size))
 
         patches = self.crop_patches(image)
-        predicted_patches = self.predict_patches(patches)
-        assembled_predictions = self.assemble_predictions(predicted_patches, image.size)
 
         with torch.no_grad():
-            assembled_predictions = F.interpolate(assembled_predictions[None, ...], image_size[::-1])[0]
+            predicted_patches = self.predict_patches(patches)
+            assembled_predictions = self.assemble_predictions(predicted_patches, image.size)
 
         full_img_tensor = network_output_to_color_image(torch.unsqueeze(assembled_predictions, dim=0),
-                                                        self.class_to_color_map)
+                                                        self.class_to_color_map,
+                                                        show_confidence_in_segmentation=self.show_confidence_in_segmentation)
         segmented_image = transforms.ToPILImage()(torch.squeeze(full_img_tensor, 0))
 
         return segmented_image, assembled_predictions
+
+
+class VotingAssemblySegmenter(Segmenter):
+
+    def assemble_predictions(self, patches: List[dict], output_size: Tuple) -> torch.Tensor:
+        # TODO: check if this would work with multiple batches
+        # dimensions are height, width, class for easier access
+        num_classes = self.network.num_classes
+        max_width = output_size[0]
+        max_height = output_size[1]
+        votes_per_class = torch.full((max_height, max_width, num_classes), 0, dtype=torch.int32, device=self.device)
+
+        for patch in self.progress_bar(patches, desc="Merging patches...", leave=False):
+            x_start, y_start, x_end, y_end = patch["bbox"]
+            x_start = max(x_start, 0)
+            y_start = max(y_start, 0)
+            x_end = min(x_end, max_width)
+            y_end = min(y_end, max_height)
+            window_height = y_end - y_start
+            window_width = x_end - x_start
+
+            # vote by counting how often a class has been predicted
+            max_predictions_of_patch = torch.argmax(patch["prediction"], dim=0)
+            class_has_been_predicted = torch.stack([max_predictions_of_patch == class_id for class_id in
+                                                    range(num_classes)], dim=2)
+            votes_per_class[y_start:y_end, x_start:x_end, :] += class_has_been_predicted[:window_height, :window_width]
+
+        # Transform votes to percentages
+        normalized_votes = votes_per_class / torch.unsqueeze(votes_per_class.sum(dim=2), dim=2)
+        return normalized_votes

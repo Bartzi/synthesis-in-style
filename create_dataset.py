@@ -15,18 +15,15 @@ from tqdm import tqdm
 
 from latent_projecting import Latents
 from networks import StyleganAutoencoder, TwoStemStyleganAutoencoder, load_autoencoder_or_generator
-from segmentation.benchmark_segmenter import BenchmarkSegmenter, TextLineBenchmarkSegmenter
+from segmentation.black_white_handwritten_printed_text_segmenter import BlackWhiteHandwrittenPrintedTextSegmenter
 from segmentation.evaluation.coco_gt import iter_through_images_in, COCOGtCreator
-from segmentation.full_image_horae_segmenter import FullImageSegmenter
-from segmentation.gan_segmenter import Segmenter
-from segmentation.handwriting_printed_text_segmenter import HandwritingAndPrintedTextSegmenter
 from utils.config import load_config, get_root_dir_of_checkpoint
 from utils.data_loading import build_latent_and_noise_generator
 
 
 def generate_images(batch: Union[Latents, dict], autoencoder: Union[StyleganAutoencoder, TwoStemStyleganAutoencoder],
-                    device: str = 'cuda', mean_latent: torch.Tensor = None) -> Tuple[
-    Dict[int, torch.Tensor], torch.Tensor]:
+                    device: str = 'cuda', mean_latent: torch.Tensor = None) \
+                    -> Tuple[Dict[int, torch.Tensor], torch.Tensor]:
     if not isinstance(batch, Latents):
         batch = {k: v.to(device) for k, v in batch.items()}
         latents = autoencoder.encode(batch['input_image'])
@@ -109,20 +106,14 @@ def build_dataset(args: argparse.Namespace, creation_config: Dict):
 
     image_save_base_dir, semantic_segmentation_base_dir = get_base_dirs(args)
 
-    if creation_config['segmenter_type'] == 'benchmark':
-        segmenter_class = functools.partial(BenchmarkSegmenter, keys_to_merge=creation_config['keys_to_merge'])
-    elif creation_config['segmenter_type'] == 'full_image':
-        segmenter_class = functools.partial(FullImageSegmenter, keys_to_merge=creation_config['keys_to_merge'])
-    elif creation_config['segmenter_type'] == 'hw_printed':
-        assert 'only_keep_overlapping_boxes' in creation_config, 'The key "only_keep_overlapping_boxes" must be ' \
-                                                                 'specified in the config file.'
-        segmenter_class = functools.partial(HandwritingAndPrintedTextSegmenter,
+    if creation_config['segmenter_type'] == 'black_white_handwritten_printed':
+        assert 'only_keep_overlapping' in creation_config, 'The key "only_keep_overlapping" must be specified in the ' \
+                                                           'config file.'
+        segmenter_class = functools.partial(BlackWhiteHandwrittenPrintedTextSegmenter,
                                             keys_to_merge=creation_config['keys_to_merge'],
-                                            only_keep_overlapping_boxes=creation_config['only_keep_overlapping_boxes'])
-    elif creation_config['segmenter_type'] == 'textline_benchmark':
-        segmenter_class = TextLineBenchmarkSegmenter
+                                            only_keep_overlapping=creation_config['only_keep_overlapping'])
     else:
-        segmenter_class = Segmenter
+        raise NotImplementedError
 
     segmenter = segmenter_class(
         creation_config['keys_for_class_determination'],
@@ -131,11 +122,12 @@ def build_dataset(args: argparse.Namespace, creation_config: Dict):
         args.num_clusters,
         config['image_size'],
         creation_config['class_to_color_map'],
-        debug=args.debug
+        debug=args.debug,
+        min_class_contour_area=creation_config['min_class_contour_area']
     )
     class_label_map = load_class_label_map(semantic_segmentation_base_dir, args.num_clusters)
     unlabelled_clusters = check_sanity_of_class_label_map(class_label_map, creation_config)
-    assert not unlabelled_clusters, f"Some of the activation maps were not labelled completely (map_id: cluster_id):\n" \
+    assert not unlabelled_clusters, f"Some of the activation maps were not labelled completely (map_id: cluster_id):\n"\
                                     f"{unlabelled_clusters}"
     data_iter = iter(data_loader)
 

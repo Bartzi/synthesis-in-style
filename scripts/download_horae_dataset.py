@@ -31,7 +31,7 @@ class IIIFDownloader:
 
     def __init__(self, iiif_manifests: List[Dict[str, str]], max_worker: int = 3, max_image_size: int = 3000):
         self.num_max_workers = max_worker
-        self.manifest_urls = [manifest['manifest'] for manifest in iiif_manifests]
+        self.manifest_urls = [manifest['iiif manifest'] for manifest in iiif_manifests]
         self.max_image_size = max_image_size
 
     def download_and_save_image(self, url: str, dest_file_name: Path):
@@ -158,7 +158,7 @@ class IIIFDownloader:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Tool to download the images of the HORAE dataset")
     parser.add_argument("destination", help="Path to dir where downloaded images shall be saved")
-    parser.add_argument("--csv", default="https://raw.githubusercontent.com/oriflamms/HORAE/master/Corpus/BooksOfHours_Manifests.csv", help="URL of csv with data for download")
+    parser.add_argument("--csv", default="https://raw.githubusercontent.com/oriflamms/HORAE/master/Corpus/BooksOfHours_MSS_Manifests.csv", help="URL of csv with data for download")
     parser.add_argument("--num-worker", type=int, default=3, help="number of parallel download threads")
     parser.add_argument("--max-image-size", type=int, default=3000, help="max size of largest image side in pixels")
 

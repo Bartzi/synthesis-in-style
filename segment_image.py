@@ -274,7 +274,7 @@ def get_page_xml_from_contours(lines: List, image_filename: str, image_dimension
     return xml_str
 
 
-def main(args):
+def main(args):  # TODO: has to be tested again
     input_images = args.images
     if len(input_images) == 1 and input_images[0].endswith('.json'):
         # we are segmenting all images from the given json file
