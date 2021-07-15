@@ -17,7 +17,10 @@ If you have any good ideas, please let us know!
 Installation and preparation of our code for use is simple:
 1. Make sure that you have an Nvidia GPU in your machine!
 1. Clone the Repo
-1. Build a Docker image: `docker build --build-arg UNAME=$(whoami) --build-arg UID=$(id -u) --build-arg GID=$(id -g) -t synthesis_in_style:$(whoami) .`
+1. Build a Docker image:
+   ```shell
+   docker build --build-arg UNAME=$(whoami) --build-arg UID=$(id -u) --build-arg GID=$(id -g) -t synthesis_in_style:$(whoami) .
+   ```
 1. Done!
 
 ## Building a Model
@@ -47,7 +50,9 @@ To prepare your dataset, you have multiple options.
 You can crop patches or use the available images directly.
 If you wish to crop patches, you can use the script `create_stylegan_train_dataset.py` in the `scripts` directory.
 Assuming you saved the HORAE dataset under `/data/horae`, you could run it like so:
-`python3 create_stylegan_train_dataset.py /data/horae /data/horae_crops 50000`.
+```shell
+python3 create_stylegan_train_dataset.py /data/horae /data/horae_crops 50000
+```
 This will create patches of size `256 x 256` in the directory `/data/horae_crops`.
 Please run `python3 create_stylegan_train_dataset.py -h` for further options.
 
@@ -59,9 +64,9 @@ In our case the json file resides in `/data`.
 Thus, the content of the file would be the following:
 ```json
 [
-  'horae_crops/0.png',
-  'horae_crops/1.png',
-  [...]
+  "horae_crops/0.png",
+  "horae_crops/1.png",
+  "[...]"
 ]
 ```
 
@@ -73,7 +78,9 @@ However, one GPU also suffices.
 To train a StyleGAN model, use the script `train_stylegan_2.py`.
 Let's assume we want to train on a machine with 8 GPUs.
 We could run the training out of the box like this:
-`python3 -m torch.distributed.launch --nproc_per_node=8 train_stylegan_2.py configs/stylegan_256px.yaml --images /data/train.json --val-images /data/val.json -l <name of your series of experiments> -ln <name of this experiment>`
+```shell
+python3 -m torch.distributed.launch --nproc_per_node=8 train_stylegan_2.py configs/stylegan_256px.yaml --images /data/train.json --val-images /data/val.json -l <name of your series of experiments> -ln <name of this experiment>
+```
 There are further options you can use to adapt the training.
 Run `python3 train_stylegan_2.py -h` to get an overview of all options.
 You can modify training hyperparameters by adapting the config yaml file (see examples in the dir `configs`).
@@ -89,7 +96,9 @@ You'll have to do the following steps for each StyleGAN model again because each
 
 To perform this step, you can use the script `create_semantic_segmentation.py`.
 Assuming, we trained a model, which was saved in `logs/training/horae`, we could do it the following way:
-`python3 create_semantic_segmentation.py logs/training/horae/checkpoints/100000.pt`.
+```shell
+python3 create_semantic_segmentation.py logs/training/horae/checkpoints/100000.pt
+```
 There are further options, you can view them with `python3 create_semantic_segmentation.py -h`.
 
 Once this script is done, you will find the result in the directory `logs/training/horae/semantic_segmentation`.
@@ -137,7 +146,9 @@ Just run it and create a nice dataset of around 100 000 (or more) images.
 Let's assume your synthetic dataset is in `/data/horae_train`.
 You can now use the `train_segmentation.py` script to train a model for semantic segmentation.
 For example if you wish to train on two GPUs:
-`python3 -m torch.dsitributed.launch --n_proc_per_node 2 train_segmentation.py configs/segmenter.yaml --images /data/horae_train/train.json --val-images /data/horae_train/val.json --coco-gt /data/horae_train/coco_gt.json -ln segmentation_train ` 
+```shell
+python3 -m torch.dsitributed.launch --n_proc_per_node 2 train_segmentation.py configs/segmenter.yaml --images /data/horae_train/train.json --val-images /data/horae_train/val.json --coco-gt /data/horae_train/coco_gt.json -ln segmentation_train
+``` 
 Check further options with `python3 train_segmentation.py -h`.
 
 ### Segmenting Original Images
@@ -145,7 +156,9 @@ Check further options with `python3 train_segmentation.py -h`.
 You can now use the segmentation model to segment real images :tada:.
 To do so, use the `segment_image.py` script.
 Using the model trained in the last section on some hypothetical document images residing in `/data/images`:
-`python3 segment_image.py logs/training/segmentation_train/checkpoints/100000.pt /data/images/image_0.png --output-dir /data/output`.
+```shell
+python3 segment_image.py logs/training/segmentation_train/checkpoints/100000.pt /data/images/image_0.png --output-dir /data/output
+```
 
 ### Questions
 
