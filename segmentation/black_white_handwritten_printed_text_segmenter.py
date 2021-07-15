@@ -4,11 +4,11 @@ from typing import List, Dict, Tuple
 import numpy
 import torch
 
-from segmentation.gan_segmenter import Segmenter, ClassContours
+from segmentation.dataset_segmenter import DatasetSegmenter, ClassContours
 from utils.segmentation_utils import bounding_rect_from_contours, PredictedClusters
 
 
-class BlackWhiteHandwrittenPrintedTextSegmenter(Segmenter):
+class BlackWhiteHandwrittenPrintedTextSegmenter(DatasetSegmenter):
     """
     This Segmenter is applied to black and white images that contain handwritten and printed text. Samples were
     originally taken from WPI auction catalogues.

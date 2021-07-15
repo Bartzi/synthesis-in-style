@@ -6,11 +6,11 @@ import numpy
 import pytest
 from PIL import Image, ImageDraw
 
-from segmentation.gan_segmenter import Segmenter
+from segmentation.dataset_segmenter import DatasetSegmenter
 from utils.segmentation_utils import draw_contours_on_same_sized_canvases
 
 
-class MergeTestSegmenter(Segmenter):
+class MergeTestDatasetSegmenter(DatasetSegmenter):
     def __init__(self):
         # The functionality we want to test is independent of Segmenter state so we can override the initialization
         # function to avoid unnecessary overhead.
@@ -71,7 +71,7 @@ class BaseTestContourMerging:
 
     @pytest.fixture
     def segmenter(self):
-        return MergeTestSegmenter()
+        return MergeTestDatasetSegmenter()
 
 
 class TestOverlapDetection(BaseTestContourMerging):

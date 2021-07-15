@@ -3,10 +3,10 @@ import math
 import pytest
 from typing import Union, Tuple
 
-from segmentation.segmenter import Segmenter
+from segmentation.analysis_segmenter import AnalysisSegmenter
 
 
-class PatchCropTestSegmenter(Segmenter):
+class PatchCropTestAnalysisSegmenter(AnalysisSegmenter):
     def __init__(self, patch_size: int, patch_overlap: Union[int, None] = None,
                  patch_overlap_factor: Union[float, None] = None):
         self.patch_size = patch_size
@@ -31,15 +31,15 @@ class TestPatchCropping:
 
     @pytest.fixture
     def default_segmenter(self, patch_sizes):
-        return PatchCropTestSegmenter(patch_sizes)
+        return PatchCropTestAnalysisSegmenter(patch_sizes)
 
     @pytest.fixture(params=[0.25, 0.3, 0.5, 0.6, 0.75, 0.9])
     def overlap_factor_segmenter(self, patch_sizes, request):
-        return PatchCropTestSegmenter(patch_sizes, patch_overlap_factor=request.param)
+        return PatchCropTestAnalysisSegmenter(patch_sizes, patch_overlap_factor=request.param)
 
     @pytest.fixture(params=[1, 3, 5, 6, 7, 9])
     def absolute_overlap_segmenter(self, patch_sizes, request):
-        return PatchCropTestSegmenter(patch_sizes, patch_overlap=request.param)
+        return PatchCropTestAnalysisSegmenter(patch_sizes, patch_overlap=request.param)
 
     @pytest.mark.parametrize("overlap",
                              [(-1, None), (500, None), (None, -1.0), (None, 1.0), (2, 0.9)],
@@ -47,13 +47,13 @@ class TestPatchCropping:
     def test_wrong_segmenter_instantiation(self, overlap: Tuple[Union[int, None], Union[float, None]]):
         absolute_overlap, overlap_factor = overlap
         with pytest.raises(AssertionError) as exec_info:
-            PatchCropTestSegmenter(10, patch_overlap=absolute_overlap, patch_overlap_factor=overlap_factor)
+            PatchCropTestAnalysisSegmenter(10, patch_overlap=absolute_overlap, patch_overlap_factor=overlap_factor)
         assert exec_info.type == AssertionError
 
     @pytest.mark.parametrize(
         "image_size_factor", [(1, 1), (2, 1), (1, 2), (3, 3), (1.5, 1), (1.5, 1.5), (4.5, 4.5), (5.7, 6.1)]
     )
-    def test_no_specific_overlap(self, default_segmenter: PatchCropTestSegmenter,
+    def test_no_specific_overlap(self, default_segmenter: PatchCropTestAnalysisSegmenter,
                                  image_size_factor: Tuple[float, float]):
         image_size = (int(image_size_factor[0] * default_segmenter.patch_size),
                       int(image_size_factor[1] * default_segmenter.patch_size))
@@ -61,7 +61,7 @@ class TestPatchCropping:
         assert len(resulting_patches) == math.ceil(image_size_factor[0]) * math.ceil(image_size_factor[1])
 
     @pytest.mark.parametrize("image_size_factor", image_size_factors, ids=factor_ids)
-    def test_overlap_factor_calculation(self, overlap_factor_segmenter: PatchCropTestSegmenter,
+    def test_overlap_factor_calculation(self, overlap_factor_segmenter: PatchCropTestAnalysisSegmenter,
                                         image_size_factor: Tuple[float, float]):
         # Code duplication between this function and test_absolute_overlap_calculation is intentional since pytest
         # doesn't allow the usage of fixtures in parameterize yet. Otherwise one could do sth. like:
@@ -78,7 +78,7 @@ class TestPatchCropping:
         assert height_overlap == overlap_factor_segmenter.patch_overlap
 
     @pytest.mark.parametrize("image_size_factor", image_size_factors, ids=factor_ids)
-    def test_absolute_overlap_calculation(self, absolute_overlap_segmenter: PatchCropTestSegmenter,
+    def test_absolute_overlap_calculation(self, absolute_overlap_segmenter: PatchCropTestAnalysisSegmenter,
                                           image_size_factor: Tuple[float, float]):
         image_size = (int(image_size_factor[0] * absolute_overlap_segmenter.patch_size),
                       int(image_size_factor[1] * absolute_overlap_segmenter.patch_size))
@@ -92,7 +92,7 @@ class TestPatchCropping:
         assert height_overlap == absolute_overlap_segmenter.patch_overlap
 
     @pytest.mark.parametrize("image_size_factor", image_size_factors, ids=factor_ids)
-    def test_automatic_patch_calculation(self, default_segmenter: PatchCropTestSegmenter,
+    def test_automatic_patch_calculation(self, default_segmenter: PatchCropTestAnalysisSegmenter,
                                          image_size_factor: Tuple[float, float]):
         image_size = (int(image_size_factor[0] * default_segmenter.patch_size),
                       int(image_size_factor[1] * default_segmenter.patch_size))

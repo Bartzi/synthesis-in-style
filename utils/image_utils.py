@@ -34,9 +34,9 @@ def opencv_image_to_pil(opencv_image: numpy.ndarray) -> ImageClass:
 def resize_image(image: ImageClass, new_dimensions: List[int]) -> ImageClass:
     assert any([size > 0 for size in new_dimensions]), "One of the given resize dimensions has to be greater than 0."
     if new_dimensions[0] == -1:
-        resize_factor = new_dimensions[1] / image.width
-        new_dimensions[0] = int(image.height * resize_factor)
+        aspect_ratio = image.height / image.width
+        new_dimensions = int(new_dimensions[1] * aspect_ratio), new_dimensions[1]
     elif new_dimensions[1] == -1:
-        resize_factor = new_dimensions[0] / image.height
-        new_dimensions[1] = int(image.width * resize_factor)
-    return image.resize((new_dimensions[1], new_dimensions[0]))
+        aspect_ratio = image.width / image.height
+        new_dimensions = new_dimensions[0], int(new_dimensions[0] * aspect_ratio)
+    return image.resize((new_dimensions[1], new_dimensions[0]), Image.LANCZOS)

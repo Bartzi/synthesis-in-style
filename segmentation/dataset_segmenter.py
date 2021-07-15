@@ -16,7 +16,7 @@ from utils.segmentation_utils import draw_contours_on_same_sized_canvases, Class
     ClassContoursForSubImages, BBox
 
 
-class Segmenter:
+class DatasetSegmenter:
 
     def __init__(self, keys_for_class_determination: List[str], keys_for_finegrained_segmentation: List[str],
                  base_dir: Path, num_clusters: int, image_size: int, class_to_color_map: Dict,

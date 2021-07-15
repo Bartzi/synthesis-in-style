@@ -38,5 +38,6 @@ class SegmentationPlotter(ImagePlotter):
         assert len(self.networks) == 1, "Segmentation Plotter only supports 1 network!"
         with torch.no_grad():
             network_outputs = self.networks[0].predict(self.input_images)
-        predictions.append(network_output_to_color_image(network_outputs, self.class_to_color_map))
+        network_output = network_output_to_color_image(network_outputs, self.class_to_color_map)
+        predictions.append(network_output * 2 - 1)  # Normalize network output
         return predictions

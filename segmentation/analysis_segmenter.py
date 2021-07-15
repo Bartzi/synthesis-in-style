@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Type, List, Union, Tuple, Iterator
 
 import torch
-import torch.nn.functional as F
 from PIL.Image import Image as ImageClass
 from torchvision import transforms
 from tqdm import tqdm
@@ -18,7 +17,7 @@ from visualization.utils import network_output_to_color_image
 Color = Tuple[int, int, int]
 
 
-class Segmenter:
+class AnalysisSegmenter:
 
     def __init__(self, model_checkpoint: str, device: str, class_to_color_map: Union[str, Path],
                  max_image_size: int = None, print_progress: bool = True, patch_overlap: Union[int, None] = None,
@@ -151,7 +150,7 @@ class Segmenter:
             max_values = torch.maximum(assembled_window, patch_without_padding)
             assembled_predictions[y_start:y_end, x_start:x_end, :] = max_values
 
-        return assembled_predictions
+        return assembled_predictions.permute(2, 0, 1)  # permute so that the shape matches the original network output
 
     def convert_image_to_correct_color_space(self, image: ImageClass) -> ImageClass:
         if self.network.num_input_channels == 3:
@@ -183,7 +182,7 @@ class Segmenter:
         return segmented_image, assembled_predictions
 
 
-class VotingAssemblySegmenter(Segmenter):
+class VotingAssemblySegmenter(AnalysisSegmenter):
 
     def assemble_predictions(self, patches: List[dict], output_size: Tuple) -> torch.Tensor:
         # TODO: check if this would work with multiple batches
@@ -210,4 +209,4 @@ class VotingAssemblySegmenter(Segmenter):
 
         # Transform votes to percentages
         normalized_votes = votes_per_class / torch.unsqueeze(votes_per_class.sum(dim=2), dim=2)
-        return normalized_votes
+        return normalized_votes.permute(2, 0, 1)  # permute so that the shape matches the original network output

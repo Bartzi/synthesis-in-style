@@ -28,6 +28,7 @@ def linear_gradient(start_rgb: Color, finish_rgb: Color, n: int = 10) -> List[Co
 
 def network_output_to_color_image(network_outputs: torch.Tensor, class_to_color_map: Dict,
                                   show_confidence_in_segmentation: bool = False) -> torch.Tensor:
+    network_outputs = network_outputs.permute(0, 2, 3, 1)
     batch_size, height, width, num_predicted_classes = network_outputs.shape
     assert num_predicted_classes == len(class_to_color_map), "Number of predicted classes and expected classes does " \
                                                              "not match " f"{num_predicted_classes} vs " \

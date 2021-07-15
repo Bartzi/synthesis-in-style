@@ -9,7 +9,7 @@ import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from data.segmentation_dataset import SegmentationDataset
+from data.segmentation_dataset import SegmentationDataset, AugmentedSegmentationDataset
 from networks import load_weights
 from networks.doc_ufcn import get_doc_ufcn
 from pytorch_training.data.caching_loader import CachingLoader
@@ -24,6 +24,7 @@ from pytorch_training.triggers import get_trigger
 from updater.segmentation_updater import SegmentationUpdater
 from utils.config import load_yaml_config, merge_config_and_args
 from utils.data_loading import build_data_loader, fill_plot_images, resilient_loader
+from utils.clamped_cosine import ClampedCosineAnnealingLR
 from visualization.segmentation_plotter import SegmentationPlotter
 
 
@@ -37,8 +38,8 @@ def main(args: argparse.Namespace, rank: int, world_size: int):
     else:
         loader_func = resilient_loader
 
-    dataset_class = functools.partial(SegmentationDataset, class_to_color_map_path=class_to_color_map_path,
-                                      image_size=config['image_size'])
+    dataset_class = functools.partial(AugmentedSegmentationDataset, class_to_color_map_path=class_to_color_map_path,
+                                      image_size=config['image_size'], num_augmentations=config['num_augmentations'])
     train_data_loader = build_data_loader(args.train_json, config, False, dataset_class=dataset_class,
                                           loader_func=loader_func)
 
@@ -134,7 +135,8 @@ def main(args: argparse.Namespace, rank: int, world_size: int):
         trainer.extend(image_plotter)
 
     schedulers = {
-        "encoder": CosineAnnealingLR(optimizer, trainer.num_iterations, eta_min=1e-8)
+        'encoder': ClampedCosineAnnealingLR(optimizer, trainer.num_iterations, max_update=config['cosine_max_update'],
+                                            eta_min=config['end_lr'])
     }
     lr_scheduler = LRScheduler(schedulers, trigger=get_trigger((1, 'iteration')))
     trainer.extend(lr_scheduler)
@@ -164,7 +166,6 @@ if __name__ == "__main__":
     parser.add_argument("--network", default='base', help="type of network to use")
     parser.add_argument("--fine-tune", help="Path to model to finetune from")
     parser.add_argument("--wandb-project-name", default="Semantic Segmentation for Document Images",
-                        help="The project name of the WandB project")
     parser.add_argument("--wandb-entity", help="The name of the WandB entity")
 
     parsed_args = parser.parse_args()

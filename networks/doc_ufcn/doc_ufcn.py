@@ -12,13 +12,13 @@ from torch import nn
 class DocUFCN(nn.Module):
 
     def __init__(self, num_classes: int, input_channels: int = 3, encoder_dropout_prob: float = 0.4,
-                 decoder_droput_prob: float = 0.4, background_class_id: int = 0, min_confidence: float = 0.7,
+                 decoder_dropout_prob: float = 0.4, background_class_id: int = 0, min_confidence: float = 0.7,
                  min_contour_area: int = 55):
         super().__init__()
         self.num_classes = num_classes
         self.num_input_channels = input_channels
         self.encoder_dropout_prob = encoder_dropout_prob
-        self.decoder_dropout_prob = decoder_droput_prob
+        self.decoder_dropout_prob = decoder_dropout_prob
         self.background_class_id = background_class_id
         self.min_confidence = min_confidence
         self.min_contour_area = min_contour_area
@@ -73,22 +73,22 @@ class DocUFCN(nn.Module):
         clean_predictions = predictions.clone().cpu()
         for image_id in range(len(predictions)):
             class_predictions = predictions[image_id]
-            for class_id, predictions in enumerate(class_predictions):
+            for class_id, class_prediction in enumerate(class_predictions):
                 if class_id == self.background_class_id:
                     continue
 
-                contours = get_contours_from_prediction(predictions)
+                contours = get_contours_from_prediction(class_prediction)
                 if contours is None:
                     continue
 
-                remove_mask = numpy.ones(predictions.shape, dtype=numpy.uint8)
+                remove_mask = numpy.ones(class_prediction.shape, dtype=numpy.uint8)
                 for contour in contours:
                     area = cv2.contourArea(contour)
                     if area < self.min_contour_area:
                         remove_mask = cv2.fillPoly(remove_mask, [contour], (0, 0, 0))
                 clean_predictions[image_id, class_id] *= remove_mask
 
-        return clean_predictions
+        return clean_predictions.to(predictions.device)
 
     def postprocess(self, predictions: torch.Tensor) -> torch.Tensor:
         processed_predictions = predictions.clone()

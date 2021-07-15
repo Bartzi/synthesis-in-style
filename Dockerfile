@@ -19,8 +19,8 @@ ARG UNAME=user
 ARG UID=10001
 ARG GID=100
 
-RUN groupadd -g $GID -o $UNAME
-RUN useradd -m -u $UID -g $GID -o -s /bin/zsh $UNAME
+RUN groupadd -g $GID -o $UNAME && \
+    useradd -m -u $UID -g $GID -o -s /bin/zsh $UNAME
 
 RUN mkdir /data
 ARG BASE=/app

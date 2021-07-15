@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from typing import Tuple, Dict, Union, List, NamedTuple
 
@@ -6,6 +8,12 @@ import numpy
 import torch
 
 Color = Tuple[int, int, int]
+# {class_name: {sub_image_id: list_of_batches[list_of_contours[numpy_array_of_points, ...]/None, ...]}}
+ClassContoursForSubImages = Dict[str, Dict[str, List[List[numpy.ndarray]]]]
+# {class_name: list_of_batches[list_of_contours[numpy_array_of_points, ...]/None, ...]}
+ClassContours = Dict[str, List[Union[None, List[numpy.ndarray]]]]
+# {sub_image_id: {class_name: predicted_tensor})}
+PredictedClusters = Dict[str, Dict[str, torch.Tensor]]
 
 
 class BBox(NamedTuple):
@@ -31,8 +39,44 @@ class BBox(NamedTuple):
                self.bottom_right(), \
                (self.left, self.bottom)
 
+    def is_overlapping_with(self, other_box: BBox):
+        return self.left < other_box.right and \
+               self.right > other_box.left and \
+               self.top < other_box.bottom and \
+               self.bottom > other_box.top
+
+    def get_mutual_bbox(self, other_box):
+        return BBox(
+            min(self.left, other_box.left),
+            min(self.top, other_box.top),
+            max(self.right, other_box.right),
+            max(self.bottom, other_box.bottom),
+        )
+
+
+def bounding_rect_from_contours(contours: List[numpy.ndarray]) -> numpy.ndarray:
+    bounding_rects = numpy.concatenate([cv2.boundingRect(contour) for contour in contours])
+    if bounding_rects.ndim == 1:
+        bounding_rects = bounding_rects.reshape((1, len(bounding_rects)))
+    return bounding_rects
+
+
+def draw_contours_on_same_sized_canvases(contours: List[numpy.ndarray], minimal_canvas: bool = False) \
+                                         -> List[numpy.ndarray]:
+    combined_contours = numpy.concatenate(contours)
+    x_max, y_max = combined_contours.max(axis=0)[0]
+    x_min, y_min = 0, 0
+    if minimal_canvas:
+        # Determine how small a minimal canvas (numpy array) has to be to avoid creating an oversized numpy array that
+        # contains a lot of empty space
+        x_min, y_min = combined_contours.min(axis=0)[0]
+
+    canvas = numpy.zeros((y_max - y_min + 1, x_max - x_min + 1))  # height x width
+    return [cv2.drawContours(canvas.copy(), [contour - (x_min, y_min)], 0, 1, cv2.FILLED) for contour in contours]
+
 
 def get_contours_from_prediction(predictions: torch.Tensor) -> Union[numpy.ndarray, None]:
+    # TODO: maybe migrate from prediction to actual images (aka second function or change function call in doc_ufcn)
     scaled_predictions = predictions.cpu().numpy() * 255
     scaled_predictions = scaled_predictions.astype(numpy.uint8)
     class_predictions = cv2.morphologyEx(
