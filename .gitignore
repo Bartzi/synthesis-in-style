@@ -9,3 +9,4 @@ debug
 datasets
 **/*.json
 docker-compose.yml
+venv
